@@ -31,6 +31,7 @@
           <span v-if="!loading">登 录</span>
           <span v-else>登 录 中...</span>
         </el-button>
+        <el-button @click="setRank">改变rank</el-button>
       </el-form-item>
     </el-form>
     <!--  底部  -->
@@ -70,6 +71,10 @@ export default {
     }
   },
   methods: {
+    setRank(){
+      this.$store.dispatch('setRank_A','p8')
+      console.log(this.$store.getters.simpleHandle_A);
+    },
     getCode(){
       //发送请求给后端，需要用到axios
       this.$request.get('http://localhost:8000/auth/code').then(res=>{

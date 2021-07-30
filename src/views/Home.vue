@@ -2,6 +2,7 @@
   <div>
     <h2>Dashboard</h2>
     <el-button @click.native.prevent="logout">注销</el-button>
+    <el-button @click.native.prevent="getUserInfo">获取用户信息</el-button>
   </div>
 
 </template>
@@ -19,6 +20,11 @@ export default {
         removeToken(Config.TokenKey)
         this.$router.replace('/')
       })
+    },
+    getUserInfo(){
+      this.$request.get('http://localhost:8000/auth/info').then(res=>{
+        console.log(res.data);
+      },err=> err)
     }
   }
 }

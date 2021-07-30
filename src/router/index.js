@@ -27,7 +27,7 @@ const router = new VueRouter({
 
 //假如用户A没有登录，访问了Login页面
 router.beforeEach((to, from, next) => {
-  if (getToken() !== 'undefined'){//已登录
+  if (getToken() !== 'undefined' && getToken()){//已登录
     if (to.name === 'Login') next('/dashboard') // 如果访问的是登陆页面，直接跳转到主页
     else next() //想去哪里就去哪里
   }else if (to.path !== '/')

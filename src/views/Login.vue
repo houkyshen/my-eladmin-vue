@@ -52,6 +52,7 @@ export default {
   name: "Login",
   created() {
     this.getCode()
+    this.getCookie()
   },
   data(){
     return {
@@ -89,14 +90,9 @@ export default {
         code: ''
       }
     },
-    setRank(){
-      this.$store.dispatch('setRank_A','p8')
-      console.log(this.$store.getters.simpleHandle_A);
-    },
     getCode(){
       //发送请求给后端，需要用到axios
       this.$request.get('http://localhost:8000/auth/code').then(res=>{
-        setToken(res.data.token, this.loginForm.rememberMe)
         this.codeUrl = res.data.img
         this.loginForm.uuid = res.data.uuid
       })
@@ -123,9 +119,13 @@ export default {
             Cookies.remove('password')
             Cookies.remove('rememberMe')
           }
+          this.loading = true
           this.$request.post('http://localhost:8000/auth/login',user).then(res=>{
             setToken(res.data.token, this.loginForm.rememberMe)
             this.$router.push('/dashboard')
+          }).catch(()=>{
+            this.loading = false
+            this.getCode()
           })
         }else alert('请按要求完善登陆信息！')
       })

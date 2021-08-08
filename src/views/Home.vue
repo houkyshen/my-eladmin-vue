@@ -2,11 +2,17 @@
   <div style="height: 100%">
     <el-container style="height: 100%">
       <el-aside width="205px" >
-        <el-menu text-color="#bfcbd9" class="sidebar-container">
+        <el-menu text-color="#bfcbd9" class="sidebar-container" style="text-align: left">
           <el-submenu :index="item.name" v-for="item in menuList">
-            <template slot="title">{{item.meta.title}}</template>
+            <template slot="title">
+              <svg-icon slot="prefix" :icon-class="item.meta.icon"/>
+              {{item.meta.title}}
+            </template>
             <el-menu-item :index="child.name" v-for="child in item.children" style="padding-left: 5px">
-              <template slot="title">{{child.meta.title}}</template>
+              <template slot="title">
+                <svg-icon slot="prefix" :icon-class="child.meta.icon"/>
+                {{child.meta.title}}
+              </template>
             </el-menu-item>
           </el-submenu>
         </el-menu>

@@ -8,7 +8,7 @@
               <svg-icon slot="prefix" :icon-class="item.meta.icon"/>
               {{item.meta.title}}
             </template>
-            <el-menu-item :index="child.name" v-for="child in item.children" style="padding-left: 5px">
+            <el-menu-item :index="child.name" v-for="child in item.children" style="padding-left: 5px" @click="selectMenu(item.path, child.path)">
               <template slot="title">
                 <svg-icon slot="prefix" :icon-class="child.meta.icon"/>
                 {{child.meta.title}}
@@ -29,31 +29,7 @@
           </el-dropdown>
         </el-header>
         <el-main>
-          <el-table
-              ref="multipleTable"
-              :data="tableData"
-              tooltip-effect="dark"
-              style="width: 100%">
-            <el-table-column
-                type="selection"
-                width="55">
-            </el-table-column>
-            <el-table-column
-                label="日期"
-                width="120">
-              <template slot-scope="scope">{{ scope.row.date }}</template>
-            </el-table-column>
-            <el-table-column
-                prop="name"
-                label="姓名"
-                width="120">
-            </el-table-column>
-            <el-table-column
-                prop="address"
-                label="地址"
-                show-overflow-tooltip>
-            </el-table-column>
-          </el-table>
+          <router-view></router-view>
         </el-main>
       </el-container>
     </el-container>
@@ -84,10 +60,8 @@ export default {
         this.$router.replace('/')
       })
     },
-    getUserInfo() {
-      this.$request.get('http://localhost:8000/auth/info').then(res => {
-        console.log(res.data);
-      }, err => err)
+    selectMenu(path1, path2) {
+      this.$router.replace(path1 + '/' + path2).catch(err=>err)
     }
   },
   data() {

@@ -122,7 +122,7 @@ export default {
           this.loading = true
           this.$request.post('http://localhost:8000/auth/login',user).then(res=>{
             setToken(res.data.token, this.loginForm.rememberMe)
-            this.$router.push('/dashboard')
+            this.$router.push('/')
           }).catch(()=>{
             this.loading = false
             this.getCode()

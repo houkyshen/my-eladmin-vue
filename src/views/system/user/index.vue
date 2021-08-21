@@ -11,6 +11,7 @@
                size="mini"
                type="primary"
                icon="el-icon-plus"
+               @click="updateOperation('post')"
            >
              新增
            </el-button>
@@ -19,6 +20,7 @@
                size="mini"
                type="success"
                icon="el-icon-edit"
+               @click="updateOperation('put')"
            >
              修改
            </el-button>
@@ -128,60 +130,184 @@
           label="操作"
           width="120">
         <template slot-scope="scope">
-          <el-button @click="handleClick" type="text" size="small">Edit</el-button>
+          <el-button type="text" size="small">Edit</el-button>
           <el-button type="text" size="small">Delete</el-button>
         </template>
       </el-table-column>
     </el-table>
+
+    <!--用户信息编辑弹窗-->
+    <el-dialog append-to-body title="用户信息" :visible.sync="dialogFormVisible" width="680px">
+      <el-form :model="form" :inline="true" size="small" label-width="66px">
+        <el-form-item label="用户名">
+          <el-input v-model="form.username" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="电话">
+          <el-input v-model="form.phone" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="昵称">
+          <el-input v-model="form.nickName" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input v-model="form.email" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="性别">
+          <el-radio-group v-model="form.gender" style="width: 178px">
+            <el-radio label="男">男</el-radio>
+            <el-radio label="女">女</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-radio-group v-model="form.enabled">
+            <el-radio
+                v-for="item in user_status"
+                :label="item.value"
+            >{{ item.label }}
+            </el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="部门">
+          <el-select v-model="dept" placeholder="请选择部门" ref="deptSelect">
+            <el-option v-model="dept" style="height: max-content;width: 100%;padding: 0">
+              <el-tree
+                  :props="props"
+                  :load="loadDept"
+                  lazy
+                  style="width: 100%"
+                  @node-click="setDept">
+              </el-tree>
+            </el-option>
+
+          </el-select>
+        </el-form-item>
+        <el-form-item label="岗位">
+          <el-select v-model="jobDatas" multiple placeholder="请选择岗位" @change="changeJob">
+            <el-option v-for="item in jobs" :label="item.name" :value="item.id" :key="item.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="角色" prop="roles" >
+          <el-select
+              v-model="roleDatas"
+              multiple
+              placeholder="请选择角色"
+              @change="changeRole"
+          >
+            <el-option
+                v-for="item in roles"
+                :key="item.name"
+                :label="item.name"
+                :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="dialogFormVisible = false">取 消</el-button>
+        <el-button type="primary" @click="updateUser">确 定</el-button>
+      </div>
+    </el-dialog>
   </div>
 
 </template>
 
 <script>
+
+
 export default {
   name: "User",
   created() {
     this.getUserInfo()
   },
-  methods: {
-    getUserInfo() {
-      this.$request.get('http://localhost:8000/api/users').then(res => {
-        console.log(res.data);
-        this.tableData = res.data.content
-      })
-    }
-  },
+
   data() {
     return {
-      tableData: [{
-        date: '2016-05-02',
-        name: '王小虎',
-        province: '上海',
-        city: '普陀区',
-        address: '上海市普陀区金沙江路 1518 弄',
-        zip: 200333
-      }, {
-        date: '2016-05-04',
-        name: '王小虎',
-        province: '上海',
-        city: '普陀区',
-        address: '上海市普陀区金沙江路 1517 弄',
-        zip: 200333
-      }, {
-        date: '2016-05-01',
-        name: '王小虎',
-        province: '上海',
-        city: '普陀区',
-        address: '上海市普陀区金沙江路 1519 弄',
-        zip: 200333
-      }, {
-        date: '2016-05-03',
-        name: '王小虎',
-        province: '上海',
-        city: '普陀区',
-        address: '上海市普陀区金沙江路 1516 弄',
-        zip: 200333
-      }]
+      jobDatas: [],
+      roleDatas: [],
+      user_status: [{label: '激活', value: 'true'}, {label: '禁用', value: 'false'}],
+      props: {
+        label: 'name',
+        children: 'zones',
+        isLeaf: 'leaf',
+      },
+      jobs: [],
+      roles: [],
+      dept: {},
+      depts: [],
+      dialogFormVisible: false,
+      tableData: [],
+      form: {
+        //以下是示例数据，可以删除
+        username: 'testJeff520',
+        email: '786500545@qq.com',
+        dept: {id: 7},
+        nickName: 'houky',
+        id: null,
+        phone: 13242842112,
+        roles: [{id: 2}],
+        enabled: 'true',
+        gender: '男',
+        jobs: [],
+        //以下是修改用户信息才需要传给后端的，新增的时候不用
+        createTime: "2021-08-17 20:00:35",
+        createBy: "admin",
+        updateTime: "2021-08-17 20:05:45"
+      }
+    }
+  },
+  methods: {
+    //发送新增、编辑用户请求给后端
+    updateUser() {
+      let op = this.$store.state.operation
+      this.form.dept = {id: this.form.dept}
+      console.log("form的数据", this.form)
+      this.$request({url: 'http://localhost:8000/api/users', method: op, data: this.form}).then(res => {
+        console.log('添加用户成功')
+        this.dialogFormVisible = false
+      })
+    },
+    //由于select组件绑定的Jobs里面只有数字组成的数组[1,2,3]，而不是对象如[{id:1},{id:2}]，需要进行转化
+    changeRole() {
+      this.form.roles = this.roleDatas.map(value => {
+        return {id: value}
+      })
+    },
+
+    //由于select组件绑定的Jobs里面只有数字组成的数组[1,2,3]，而不是对象如[{id:1},{id:2}]，需要进行转化
+    changeJob() {
+      this.form.jobs = this.jobDatas.map(value => {
+        return {id: value}
+      })
+    },
+    //点击部门后，改变部门框显示的值
+    setDept(node) {
+      this.form.dept = node.id
+      this.dept = node.name
+      this.$refs.deptSelect.visible = false
+    },
+    // 获取弹窗内部门数据，树形组件的节点信息获取
+    loadDept(node, resolve) {
+      //pid代表上级部门的id
+      let pid = node.level === 0 ? null : node.data.id
+      this.$request.get('http://localhost:8000/api/dept', {params: {enable: true, pid}}).then(res => {
+        this.depts = res.data.content
+        resolve(this.depts);
+      })
+    },
+    //点击新增或编辑按钮时
+    updateOperation(op) {
+      this.dialogFormVisible = true
+      this.$store.commit('SET_OP', op)
+      this.$request.get('http://localhost:8000/api/job?page=0&size=9999&enabled=true').then(res => {
+        this.jobs = res.data.content
+      })
+      this.$request.get('http://localhost:8013/api/roles/all').then(res => {
+        this.roles = res.data
+      })
+    },
+    getUserInfo() {
+      this.$request.get('http://localhost:8000/api/users').then(res => {
+        this.tableData = res.data.content
+      })
     }
   }
 }

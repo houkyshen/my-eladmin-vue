@@ -20,6 +20,7 @@
                size="mini"
                type="success"
                icon="el-icon-edit"
+               :disabled="selectData.length !== 1"
                @click="updateOperation('put')"
            >
              修改
@@ -79,7 +80,12 @@
     <!--用户列表信息表格-->
     <el-table
         :data="tableData"
-        style="width: 100%">
+        style="width: 100%"
+        @selection-change="handleSelectionChange">
+      <el-table-column
+          type="selection"
+          width="55">
+      </el-table-column>
       <el-table-column
           fixed
           prop="username"
@@ -116,7 +122,8 @@
           label="状态"
           width="120">
         <template slot-scope="scope">
-          <el-switch ref="enabled"></el-switch>
+          <el-switch ref="enabled"
+              v-model="scope.row.enabled"></el-switch>
         </template>
       </el-table-column>
       <el-table-column
@@ -167,8 +174,8 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="部门">
-          <el-select v-model="dept" placeholder="请选择部门" ref="deptSelect">
-            <el-option v-model="dept" style="height: max-content;width: 100%;padding: 0">
+          <el-select v-model="deptData" placeholder="请选择部门" ref="deptSelect">
+            <el-option v-model="deptData" style="height: max-content;width: 100%;padding: 0">
               <el-tree
                   :props="props"
                   :load="loadDept"
@@ -221,9 +228,10 @@ export default {
 
   data() {
     return {
+      selectData: [],
       jobDatas: [],
       roleDatas: [],
-      user_status: [{label: '激活', value: 'true'}, {label: '禁用', value: 'false'}],
+      user_status: [{label: '激活', value: true}, {label: '禁用', value: false}],
       props: {
         label: 'name',
         children: 'zones',
@@ -231,7 +239,7 @@ export default {
       },
       jobs: [],
       roles: [],
-      dept: {},
+      deptData: {},
       depts: [],
       dialogFormVisible: false,
       tableData: [],
@@ -255,13 +263,23 @@ export default {
     }
   },
   methods: {
+    //让选中的数据显示到框框里面
+    mapForm(selectRow){
+      this.deptData = selectRow.dept.name
+      this.roleDatas = selectRow.roles.map(value => value.id)
+      this.jobDatas = selectRow.jobs.map(value => value.id)
+      this.form = selectRow
+    },
+    //选中某一行时
+    handleSelectionChange(rows){
+      this.selectData = rows
+    },
     //发送新增、编辑用户请求给后端
     updateUser() {
       let op = this.$store.state.operation
-      this.form.dept = {id: this.form.dept}
       console.log("form的数据", this.form)
       this.$request({url: 'http://localhost:8000/api/users', method: op, data: this.form}).then(res => {
-        console.log('添加用户成功')
+        console.log(op + '用户成功')
         this.dialogFormVisible = false
       })
     },
@@ -280,8 +298,8 @@ export default {
     },
     //点击部门后，改变部门框显示的值
     setDept(node) {
-      this.form.dept = node.id
-      this.dept = node.name
+      this.form.dept = {id: node.id}
+      this.deptData = node.name
       this.$refs.deptSelect.visible = false
     },
     // 获取弹窗内部门数据，树形组件的节点信息获取
@@ -295,6 +313,7 @@ export default {
     },
     //点击新增或编辑按钮时
     updateOperation(op) {
+      if (op==='put') this.mapForm(this.selectData[0])
       this.dialogFormVisible = true
       this.$store.commit('SET_OP', op)
       this.$request.get('http://localhost:8000/api/job?page=0&size=9999&enabled=true').then(res => {

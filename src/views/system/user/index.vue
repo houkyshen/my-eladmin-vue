@@ -31,6 +31,7 @@
                type="danger"
                icon="el-icon-delete"
                size="mini"
+               @click="updateOperation('delete')"
            >
              删除
            </el-button>
@@ -123,7 +124,7 @@
           width="120">
         <template slot-scope="scope">
           <el-switch ref="enabled"
-              v-model="scope.row.enabled"></el-switch>
+                     v-model="scope.row.enabled"></el-switch>
         </template>
       </el-table-column>
       <el-table-column
@@ -192,7 +193,7 @@
             <el-option v-for="item in jobs" :label="item.name" :value="item.id" :key="item.id"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="角色" prop="roles" >
+        <el-form-item label="角色" prop="roles">
           <el-select
               v-model="roleDatas"
               multiple
@@ -210,7 +211,7 @@
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogFormVisible = false">取 消</el-button>
-        <el-button type="primary" @click="updateUser">确 定</el-button>
+        <el-button type="primary" @click="updateUser(form)">确 定</el-button>
       </div>
     </el-dialog>
   </div>
@@ -219,7 +220,7 @@
 
 <script>
 
-
+import Element from 'element-ui'
 export default {
   name: "User",
   created() {
@@ -252,7 +253,7 @@ export default {
         id: null,
         phone: 13242842112,
         roles: [{id: 2}],
-        enabled: 'true',
+        enabled: true,
         gender: '男',
         jobs: [],
         //以下是修改用户信息才需要传给后端的，新增的时候不用
@@ -264,23 +265,25 @@ export default {
   },
   methods: {
     //让选中的数据显示到框框里面
-    mapForm(selectRow){
+    mapForm(selectRow) {
       this.deptData = selectRow.dept.name
       this.roleDatas = selectRow.roles.map(value => value.id)
       this.jobDatas = selectRow.jobs.map(value => value.id)
       this.form = selectRow
     },
     //选中某一行时
-    handleSelectionChange(rows){
+    handleSelectionChange(rows) {
       this.selectData = rows
     },
     //发送新增、编辑用户请求给后端
-    updateUser() {
+    updateUser(data) {
       let op = this.$store.state.operation
       console.log("form的数据", this.form)
-      this.$request({url: 'http://localhost:8000/api/users', method: op, data: this.form}).then(res => {
+      this.$request({url: 'http://localhost:8000/api/users', method: op, data: data}).then(res => {
         console.log(op + '用户成功')
+        Element.Message.success("操作成功")
         this.dialogFormVisible = false
+        this.getUserInfo()
       })
     },
     //由于select组件绑定的Jobs里面只有数字组成的数组[1,2,3]，而不是对象如[{id:1},{id:2}]，需要进行转化
@@ -311,15 +314,21 @@ export default {
         resolve(this.depts);
       })
     },
-    //点击新增或编辑按钮时
+    //点击新增、编辑、删除按钮时
     updateOperation(op) {
-      if (op==='put') this.mapForm(this.selectData[0])
-      this.dialogFormVisible = true
+      if (op === 'put') this.mapForm(this.selectData[0])
       this.$store.commit('SET_OP', op)
+      console.log(this.form)
+      this.dialogFormVisible = op !== 'delete'
+      if (op !== 'delete') this.getJobAndRole()
+      else this.updateUser(this.selectData.map(value => value.id))
+    },
+    //获取树形组件中的岗位和角色信息
+    getJobAndRole(){
       this.$request.get('http://localhost:8000/api/job?page=0&size=9999&enabled=true').then(res => {
         this.jobs = res.data.content
       })
-      this.$request.get('http://localhost:8013/api/roles/all').then(res => {
+      this.$request.get('http://localhost:8000/api/roles/all').then(res => {
         this.roles = res.data
       })
     },

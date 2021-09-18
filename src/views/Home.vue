@@ -40,6 +40,7 @@
 <script>
 import {removeToken} from "@/utils/auth";
 import * as Config from "@/settings";
+import store from "@/store";
 
 export default {
   name: "Dashboard",
@@ -54,10 +55,8 @@ export default {
       })
     },
     logout() {
-      //请求后端接口删除该用户的token，同时前端Cookies也要删除该用户的token
-      this.$request.delete('http://localhost:8000/auth/logout').then(res => {
-        removeToken(Config.TokenKey)
-        this.$router.replace('/')
+      this.$store.dispatch('LogOut').then(() =>{
+        this.$router.replace('/login')
       })
     },
     selectMenu(path1, path2) {

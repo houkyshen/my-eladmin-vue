@@ -11,6 +11,7 @@
                size="mini"
                type="primary"
                icon="el-icon-plus"
+               v-permission="['user:add']"
                @click="updateOperation('post')"
            >
              新增
@@ -21,6 +22,7 @@
                type="success"
                icon="el-icon-edit"
                :disabled="selectData.length !== 1"
+               v-permission="['user:edit']"
                @click="updateOperation('put')"
            >
              修改
@@ -31,6 +33,7 @@
                type="danger"
                icon="el-icon-delete"
                size="mini"
+               v-permission="['user:del']"
                @click="updateOperation('delete')"
            >
              删除
@@ -221,10 +224,24 @@
 <script>
 
 import Element from 'element-ui'
+import store from "@/store"
+
 export default {
   name: "User",
   created() {
     this.getUserInfo()
+    store.dispatch('GetInfo').then(() => {
+      console.log('获取用户信息成功！！！！')
+    })
+    //在页面加载时读取sessionStorage里的状态信息，解决页面刷新时vuex会清空的问题
+    if (sessionStorage.getItem('store')) {
+      this.$store.replaceState(JSON.parse(sessionStorage.getItem('store')));
+    }
+
+    //在页面刷新时将vuex里的信息保存到sessionStorage里
+    window.addEventListener('beforeunload', () => {
+      sessionStorage.setItem('store', JSON.stringify(this.$store.state));
+    })
   },
 
   data() {

@@ -8,8 +8,10 @@ import 'element-ui/lib/theme-chalk/index.css'
 import './assets/styles/index.scss'
 import request from "@/utils/request";
 import '@/assets/icons/index'
+import permission from "@/components/Permission";
 
 Vue.use(Element)
+Vue.use(permission)
 Vue.config.productionTip = false
 Vue.prototype.$request = request //显式的绑定
 

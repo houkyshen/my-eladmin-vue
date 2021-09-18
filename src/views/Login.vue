@@ -48,6 +48,7 @@ import { encrypt} from '@/utils/rsaEncrypt'
 import Cookies from 'js-cookie'
 import Config from '@/settings'
 import {setToken} from "@/utils/auth";
+import {getCodeImg} from "@/api/login";
 export default {
   name: "Login",
   created() {
@@ -92,7 +93,7 @@ export default {
     },
     getCode(){
       //发送请求给后端，需要用到axios
-      this.$request.get('http://localhost:8000/auth/code').then(res=>{
+      getCodeImg().then(res=>{
         this.codeUrl = res.data.img
         this.loginForm.uuid = res.data.uuid
       })
@@ -120,8 +121,10 @@ export default {
             Cookies.remove('rememberMe')
           }
           this.loading = true
-          this.$request.post('http://localhost:8000/auth/login',user).then(res=>{
-            setToken(res.data.token, this.loginForm.rememberMe)
+          // this.$request.post('http://localhost:8000/auth/login',user)
+          this.$store.dispatch('Login', user).then(res=>{
+            // setToken(res.data.token, this.loginForm.rememberMe)
+            console.log('登陆了')
             this.$router.push('/')
           }).catch(()=>{
             this.loading = false

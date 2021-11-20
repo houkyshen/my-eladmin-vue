@@ -7,6 +7,7 @@
            <!--左侧插槽-->
            <slot name="left"/>
            <el-button
+               v-if="optShow.add"
                class="filter-item"
                size="mini"
                type="primary"
@@ -17,6 +18,7 @@
              新增
            </el-button>
            <el-button
+               v-if="optShow.edit"
                class="filter-item"
                size="mini"
                type="success"
@@ -28,6 +30,7 @@
              修改
            </el-button>
            <el-button
+               v-if="optShow.delete"
                slot="reference"
                class="filter-item"
                type="danger"
@@ -39,12 +42,13 @@
              删除
            </el-button>
            <el-button
+               v-if="optShow.download"
                class="filter-item"
                size="mini"
                type="warning"
                icon="el-icon-download"
            >导出</el-button>
-           <!--右侧-->
+        <!--右侧-->
            <slot name="right"/>
         </span>
         <el-button-group class="crud-opts-right">
@@ -232,20 +236,18 @@ export default {
     this.getUserInfo()
     store.dispatch('GetInfo').then(() => {
       console.log('获取用户信息成功！！！！')
-    })
-    //在页面加载时读取sessionStorage里的状态信息，解决页面刷新时vuex会清空的问题
-    if (sessionStorage.getItem('store')) {
-      this.$store.replaceState(JSON.parse(sessionStorage.getItem('store')));
-    }
-
-    //在页面刷新时将vuex里的信息保存到sessionStorage里
-    window.addEventListener('beforeunload', () => {
-      sessionStorage.setItem('store', JSON.stringify(this.$store.state));
+      this.optShow = {
+        add: true,
+        edit: true,
+        delete: true,
+        download: true
+      }
     })
   },
 
   data() {
     return {
+      optShow: {add: false, edit: false, delete: false, download: false},
       selectData: [],
       jobDatas: [],
       roleDatas: [],
@@ -341,7 +343,7 @@ export default {
       else this.updateUser(this.selectData.map(value => value.id))
     },
     //获取树形组件中的岗位和角色信息
-    getJobAndRole(){
+    getJobAndRole() {
       this.$request.get('http://localhost:8000/api/job?page=0&size=9999&enabled=true').then(res => {
         this.jobs = res.data.content
       })

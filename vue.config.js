@@ -3,9 +3,35 @@ function resolve(dir) {
     return path.join(__dirname, dir)
 }
 
-module.exports = {
-    chainWebpack(config) {
+const port = 8080 // 端口配置
 
+module.exports = {
+    devServer: {
+        port: port,
+        open: true,
+        overlay: {
+            warnings: false,
+            errors: true
+        },
+        proxy: {
+            '/api': {
+                target: process.env.VUE_APP_BASE_API,
+                changeOrigin: true,
+                pathRewrite: {
+                    '^/api': 'api'
+                }
+            },
+            '/auth': {
+                target: process.env.VUE_APP_BASE_API,
+                changeOrigin: true,
+                pathRewrite: {
+                    '^/auth': 'auth'
+                }
+            }
+        }
+    },
+
+    chainWebpack(config) {
         // set svg-sprite-loader
         config.module
             .rule('svg')

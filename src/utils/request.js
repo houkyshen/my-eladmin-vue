@@ -5,7 +5,7 @@ import {logout} from "@/utils/login";
 import * as Config from "@/settings";
 
 let request = axios.create({
-    baseURL: process.env.VUE_APP_BASE_API, // api 的 base_url
+    baseURL: '/',
     timeout: Config.timeout // 请求超时时间
 })
 
@@ -14,9 +14,9 @@ request.interceptors.response.use(response => {
         return response
     },
     error => {
-        Element.Message.error('请求失败' + error)
         let code = error.response.data.status
-        if (code===401){//如果认证失败，则实行注销操作
+        Element.Message.error(code + ' ' + error.response.data.message)
+        if (code === 401) {//如果认证失败，则实行注销操作
             logout()
         }
         return Promise.reject(error)

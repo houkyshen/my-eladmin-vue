@@ -3,12 +3,12 @@
     <el-container style="height: 100%">
       <el-aside width="205px" >
         <el-menu text-color="#bfcbd9" class="sidebar-container" style="text-align: left">
-          <el-submenu :index="item.name" v-for="item in menuList">
+          <el-submenu :index="item.name" v-for="item in menuList" :key="item.id">
             <template slot="title">
               <svg-icon slot="prefix" :icon-class="item.meta.icon"/>
               {{item.meta.title}}
             </template>
-            <el-menu-item :index="child.name" v-for="child in item.children" style="padding-left: 5px" @click="selectMenu(item.path, child.path)">
+            <el-menu-item :index="child.name" v-for="child in item.children" :key="item.id" style="padding-left: 5px" @click="selectMenu(item.path, child.path)">
               <template slot="title">
                 <svg-icon slot="prefix" :icon-class="child.meta.icon"/>
                 {{child.meta.title}}
@@ -49,9 +49,8 @@ export default {
   },
   methods: {
     getMenus() {
-      this.$request.get('http://localhost:8000/api/menus/build').then(res => {
-        this.menuList = res.data
-        console.log(this.menuList);
+      this.$request.get('api/menus/build').then(res => {
+        this.menuList = res
       })
     },
     logout() {

@@ -33,21 +33,14 @@
         </el-button>
       </el-form-item>
     </el-form>
-    <!--  底部  -->
-<!--    <div v-if="$store.state.settings.showFooter" id="el-login-footer">
-      <span v-html="$store.state.settings.footerTxt" />
-      <span> ⋅ </span>
-      <a href="https://beian.miit.gov.cn/#/Integrated/index" target="_blank">{{ $store.state.settings.caseNumber }}</a>
-    </div>-->
   </div>
 </template>
 
 <script>
-import Background from '@/assets/images/background.jpg'
+import Background from '@/assets/images/background.jpeg'
 import { encrypt} from '@/utils/rsaEncrypt'
 import Cookies from 'js-cookie'
 import Config from '@/settings'
-import {setToken} from "@/utils/auth";
 import {getCodeImg} from "@/api/login";
 export default {
   name: "Login",
@@ -94,8 +87,8 @@ export default {
     getCode(){
       //发送请求给后端，需要用到axios
       getCodeImg().then(res=>{
-        this.codeUrl = res.data.img
-        this.loginForm.uuid = res.data.uuid
+        this.codeUrl = res.img
+        this.loginForm.uuid = res.uuid
       })
     },
     handleLogin(){
@@ -121,10 +114,7 @@ export default {
             Cookies.remove('rememberMe')
           }
           this.loading = true
-          // this.$request.post('http://localhost:8000/auth/login',user)
           this.$store.dispatch('Login', user).then(res=>{
-            // setToken(res.data.token, this.loginForm.rememberMe)
-            console.log('登陆了')
             this.$router.push('/')
           }).catch(()=>{
             this.loading = false

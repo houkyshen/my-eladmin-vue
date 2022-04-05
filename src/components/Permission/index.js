@@ -7,8 +7,6 @@ const vPermission = Vue.directive('permission', {
       const { value } = binding
       //当前用户拥有的角色/权限
       const roles = store.state.roles
-      console.log('限定权限',value)
-      console.log('当前权限',roles)
       if (value && value instanceof Array) {
         //让所有的标签都绑定admin权限，这样admin就能访问所有功能了
         value.push('admin')
@@ -18,7 +16,6 @@ const vPermission = Vue.directive('permission', {
             return permissionRoles.includes(role)
           })
           if (!hasPermission) {
-            console.log('移除了元素！')
             el.parentNode && el.parentNode.removeChild(el)
           }
         }

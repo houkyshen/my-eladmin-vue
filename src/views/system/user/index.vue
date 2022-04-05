@@ -177,6 +177,7 @@
             <el-radio
                 v-for="item in user_status"
                 :label="item.value"
+                :key="item.label"
             >{{ item.label }}
             </el-radio>
           </el-radio-group>
@@ -192,7 +193,6 @@
                   @node-click="setDept">
               </el-tree>
             </el-option>
-
           </el-select>
         </el-form-item>
         <el-form-item label="岗位">
@@ -229,13 +229,15 @@
 
 import Element from 'element-ui'
 import store from "@/store"
+import qs from 'qs'
 
 export default {
   name: "User",
   created() {
+    //获取用户列表
     this.getUserInfo()
+    //获取当前登录用户的信息
     store.dispatch('GetInfo').then(() => {
-      console.log('获取用户信息成功！！！！')
       this.optShow = {
         add: true,
         edit: true,
@@ -298,8 +300,7 @@ export default {
     updateUser(data) {
       let op = this.$store.state.operation
       console.log("提交给后端/api/users接口的数据", data)
-      this.$request({url: 'http://localhost:8000/api/users', method: op, data: data}).then(res => {
-        console.log(op + '用户成功')
+      this.$request({url: 'api/users', method: op, data: data}).then(res => {
         Element.Message.success("操作成功")
         this.dialogFormVisible = false
         this.getUserInfo()
@@ -328,8 +329,8 @@ export default {
     loadDept(node, resolve) {
       //pid代表上级部门的id
       let pid = node.level === 0 ? null : node.data.id
-      this.$request.get('http://localhost:8000/api/dept', {params: {enable: true, pid}}).then(res => {
-        this.depts = res.data.content
+      this.$request.get('api/dept', {params: {enable: true, pid}}).then(res => {
+        this.depts = res.content
         resolve(this.depts);
       })
     },
@@ -337,23 +338,22 @@ export default {
     updateOperation(op) {
       if (op === 'put') this.mapForm(this.selectData[0])
       this.$store.commit('SET_OP', op)
-      console.log(this.form)
       this.dialogFormVisible = op !== 'delete'
       if (op !== 'delete') this.getJobAndRole()
       else this.updateUser(this.selectData.map(value => value.id))
     },
     //获取树形组件中的岗位和角色信息
     getJobAndRole() {
-      this.$request.get('http://localhost:8000/api/job?page=0&size=9999&enabled=true').then(res => {
-        this.jobs = res.data.content
+      this.$request.get('api/job?page=0&size=9999&enabled=true').then(res => {
+        this.jobs = res.content
       })
-      this.$request.get('http://localhost:8000/api/roles/all').then(res => {
-        this.roles = res.data
+      this.$request.get('api/roles/all').then(res => {
+        this.roles = res
       })
     },
     getUserInfo() {
-      this.$request.get('http://localhost:8000/api/users').then(res => {
-        this.tableData = res.data.content
+      this.$request.get('api/users').then(res => {
+        this.tableData = res.content
       })
     }
   }

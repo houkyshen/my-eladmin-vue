@@ -1,7 +1,6 @@
 import axios from "axios";
 import Element from 'element-ui'
 import {getToken} from "@/utils/auth";
-import {logout} from "@/utils/login";
 import * as Config from "@/settings";
 
 let request = axios.create({
@@ -11,7 +10,7 @@ let request = axios.create({
 
 //添加响应拦截器
 request.interceptors.response.use(response => {
-        return response
+        return response.data
     },
     error => {
         let code = error.response.data.status

@@ -290,7 +290,7 @@ export default {
       this.deptData = selectRow.dept.name
       this.roleDatas = selectRow.roles.map(value => value.id)
       this.jobDatas = selectRow.jobs.map(value => value.id)
-      this.form = selectRow
+      this.form = {...selectRow}
     },
     //选中某一行时
     handleSelectionChange(rows) {

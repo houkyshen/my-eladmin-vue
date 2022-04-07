@@ -26,6 +26,7 @@
                icon="el-icon-edit"
                :disabled="selectData.length !== 1"
                v-permission="['roles:edit']"
+               @click="updateOperation('put')"
            >
              修改
            </el-button>
@@ -215,7 +216,7 @@
 import store from "@/store";
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
-import {getDepts} from "@/api/dept";
+import {getDepts, getDeptSuperior} from "@/api/dept";
 
 import {LOAD_CHILDREN_OPTIONS} from '@riophae/vue-treeselect'
 import Element from "element-ui";
@@ -236,6 +237,7 @@ export default {
         download: true
       }
     })
+    this.initForm()
   },
   data() {
     return {
@@ -260,6 +262,17 @@ export default {
     }
   },
   methods: {
+    //点击新增角色按钮时, 随机生成预设值
+    initForm() {
+      this.form = {
+        name: 'role' + Math.round((Math.random() * 10000)),
+        dataScope: '全部',
+        description: '测试角色新增',
+        level: 2,
+        depts: []
+      }
+      this.deptDatas = []
+    },
     // 触发单选
     handleCurrentChange(val) {
       if (val) {
@@ -376,12 +389,35 @@ export default {
         this.getDepts()
       }
     },
+    //给父级部门添加下拉箭头
+    buildDepts(depts) {
+      depts.forEach(data => {
+        if (data.children) {
+          this.buildDepts(data.children)
+        }
+        if (data.hasChildren && !data.children) {
+          data.children = null
+        }
+      })
+    },
     //点击新增、编辑、删除按钮时
     updateOperation(op) {
-      if (op === 'post') {
-        this.dialogFormVisible = true
+      if (op === 'post') {//新增用户
+        this.initForm()
         this.$store.commit('SET_OP', op)
+      } else if (op === 'put') {//编辑用户
+        this.form = {...this.selectData[0]}
+        this.$store.commit('SET_OP', op)
+        if (this.selectData[0].dataScope === '自定义')
+          this.deptDatas = this.form.depts.map(dept => dept.id)
+        getDeptSuperior(this.deptDatas).then(res => {//根据当前选中角色的数据权限去获取同级及上级部门，构建tree的内容，下级留着懒加载
+              const depts = res.content
+              this.buildDepts(depts)
+              this.depts = depts
+            }
+        )
       }
+      this.dialogFormVisible = true
     },
     getRoleList() {
       this.$request.get('api/roles/all').then(res => {

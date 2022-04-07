@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!--工具栏-->
     <div class="head-container">
       <!--增删改查按钮-->
       <div class="crud-opts">
@@ -83,40 +84,91 @@
         </el-button-group>
       </div>
     </div>
-    <el-table
-        :data="tableData"
-        style="width: 100%">
-      <el-table-column
-          type="selection"
-          width="55">
-      </el-table-column>
-      <el-table-column
-          fixed
-          prop="name"
-          label="名称"
-          width="150">
-      </el-table-column>
-      <el-table-column
-          prop="dataScope"
-          label="数据权限"
-          width="120">
-      </el-table-column>
-      <el-table-column
-          prop="level"
-          label="角色级别"
-          width="120">
-      </el-table-column>
-      <el-table-column
-          prop="description"
-          label="描述"
-          width="200">
-      </el-table-column>
-      <el-table-column
-          :show-overflow-tooltip="true"
-          prop="createTime"
-          label="创建日期">
-      </el-table-column>
-    </el-table>
+    <el-row :gutter="15">
+
+      <!--角色管理-->
+      <el-col :xs="24" :sm="24" :md="16" :lg="16" :xl="17" style="margin-bottom: 10px">
+        <el-card class="box-card" shadow="never">
+          <div slot="header" class="clearfix">
+            <span class="role-span">角色列表</span>
+          </div>
+          <el-table
+              :data="tableData"
+              style="width: 100%"
+              @selection-change="handleSelectionChange"
+              @current-change="handleCurrentChange"
+              highlight-current-row>
+            <el-table-column
+                type="selection"
+                width="55">
+            </el-table-column>
+            <el-table-column
+                fixed
+                prop="name"
+                label="名称"
+                width="150">
+            </el-table-column>
+            <el-table-column
+                prop="dataScope"
+                label="数据权限"
+                width="120">
+            </el-table-column>
+            <el-table-column
+                prop="level"
+                label="角色级别"
+                width="120">
+            </el-table-column>
+            <el-table-column
+                prop="description"
+                label="描述"
+                width="200">
+            </el-table-column>
+            <el-table-column
+                :show-overflow-tooltip="true"
+                prop="createTime"
+                label="创建日期">
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+
+      <!-- 菜单授权 -->
+      <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="7">
+        <el-card class="box-card" shadow="never">
+          <div slot="header" class="clearfix">
+            <el-tooltip class="item" effect="dark" content="选择指定角色分配菜单" placement="top">
+              <span class="role-span">菜单分配</span>
+            </el-tooltip>
+            <el-button
+                v-if="optShow.edit"
+                v-permission="['roles:edit']"
+                :disabled="!showButton"
+                :loading="menuLoading"
+                icon="el-icon-check"
+                size="mini"
+                style="float: right; padding: 6px 9px"
+                type="primary"
+                @click="saveMenu"
+            >保存
+            </el-button>
+          </div>
+          <el-tree
+              ref="menu"
+              lazy
+              :default-checked-keys="menuIds"
+              :load="getMenuDatas"
+              :props="defaultProps"
+              show-checkbox
+              check-strictly
+              accordion
+              node-key="id"
+              @check="menuChange"
+          />
+        </el-card>
+      </el-col>
+    </el-row>
+
+
     <!--角色信息编辑弹窗-->
     <el-dialog :visible.sync="dialogFormVisible" :close-on-click-modal="false" append-to-body width="520px">
       <el-form ref="form" :inline="true" :model="form" size="small" label-width="80px">
@@ -167,6 +219,7 @@ import {getDepts} from "@/api/dept";
 
 import {LOAD_CHILDREN_OPTIONS} from '@riophae/vue-treeselect'
 import Element from "element-ui";
+import {getChild} from "@/api/menu";
 
 export default {
   name: "Role",
@@ -186,6 +239,11 @@ export default {
   },
   data() {
     return {
+      defaultProps: {children: 'children', label: 'label', isLeaf: 'leaf'},
+      currentId: 0,
+      menuIds: [],
+      menuLoading: false,
+      showButton: false,
       optShow: {add: false, edit: false, delete: false, download: false},
       selectData: [],
       deptDatas: [],
@@ -198,16 +256,79 @@ export default {
         label: 'title', //定义显示的变量名
         isLeaf: 'leaf',
       },
-      form: {
-        name: 'jeff',
-        dataScope: '全部',
-        description: '测试角色新增',
-        level: 3,
-        depts: []
-      }
+      form: {}
     }
   },
   methods: {
+    // 触发单选
+    handleCurrentChange(val) {
+      if (val) {
+        // 清空菜单的选中
+        this.$refs.menu.setCheckedKeys([])
+        // 保存当前的角色id
+        this.currentId = val.id
+        // 初始化默认选中的key
+        this.menuIds = []
+        val.menus.forEach(data =>
+            this.menuIds.push(data.id)
+        )
+        this.showButton = true
+      }
+    },
+    //选中某一行的[复选框]时触发，修改和删除角色时使用
+    handleSelectionChange(rows) {
+      this.selectData = rows
+    },
+    //当点击复选框改变菜单权限时
+    menuChange(menu) {
+      // 获取该节点的所有子节点，id 包含自身
+      getChild(menu.id).then(childIds => {
+        // 判断是否在 menuIds 中，如果存在则删除，否则添加
+        if (this.menuIds.indexOf(menu.id) !== -1) {//删除
+          for (let i = 0; i < childIds.length; i++) {
+            const index = this.menuIds.indexOf(childIds[i])
+            if (index !== -1) {
+              this.menuIds.splice(index, 1)
+            }
+          }
+        } else {//添加
+          for (let i = 0; i < childIds.length; i++) {
+            const index = this.menuIds.indexOf(childIds[i])
+            if (index === -1) {
+              this.menuIds.push(childIds[i])
+            }
+          }
+        }
+        this.$refs.menu.setCheckedKeys(this.menuIds)
+      })
+    },
+    // 获取弹窗内菜单数据，树形组件的节点信息获取
+    getMenuDatas(node, resolve) {
+      //pid代表上级部门的id
+      let pid = node.level === 0 ? 0 : node.data.id
+      this.$request.get('api/menus/lazy', {params: {enable: true, pid}}).then(res => {
+        this.menus = res
+        resolve(this.menus);
+      })
+    },
+    //保存菜单权限设置
+    saveMenu() {
+      this.menuLoading = true
+      const role = {id: this.currentId, menus: []}
+      // 得到已选中的 key 值
+      this.menuIds.forEach(function (id) {
+        const menu = {id: id}
+        role.menus.push(menu)
+      })
+      this.$request.put("api/roles/menu", role).then(() => {
+        Element.Message.success("保存成功")
+        this.menuLoading = false
+        this.getRoleList()
+      }).catch(err => {
+        this.menuLoading = false
+        console.log(err.response.data.message)
+      })
+    },
     //发送新增、编辑角色请求给后端
     updateRole(data) {
       let op = this.$store.state.operation

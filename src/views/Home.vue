@@ -8,7 +8,7 @@
               <svg-icon slot="prefix" :icon-class="item.meta.icon"/>
               {{item.meta.title}}
             </template>
-            <el-menu-item :index="child.name" v-for="child in item.children" :key="item.id" style="padding-left: 5px" @click="selectMenu(item.path, child.path)">
+            <el-menu-item :index="child.name" v-for="child in item.children" :key="item.id" style="padding-left: 40px" @click="selectMenu(item.path, child.path)">
               <template slot="title">
                 <svg-icon slot="prefix" :icon-class="child.meta.icon"/>
                 {{child.meta.title}}

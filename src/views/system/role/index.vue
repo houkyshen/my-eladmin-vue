@@ -95,6 +95,7 @@
             <span class="role-span">角色列表</span>
           </div>
           <el-table
+              v-loading="loading"
               :data="tableData"
               style="width: 100%"
               @selection-change="handleSelectionChange"
@@ -131,6 +132,16 @@
                 label="创建日期">
             </el-table-column>
           </el-table>
+          <!--分页-->
+          <el-pagination
+              :page-size.sync="page.size"
+              :total="page.total"
+              :current-page.sync="page.page"
+              style="margin-top: 8px;"
+              layout="total, prev, pager, next, sizes"
+              @size-change="sizeChangeHandler"
+              @current-change="pageChangeHandler"
+          />
         </el-card>
       </el-col>
 
@@ -229,7 +240,7 @@ export default {
   components: {Treeselect},
   created() {
     //获取角色列表
-    this.getRoleList()
+    this.refresh()
     //获取当前登录用户的信息
     store.dispatch('GetInfo').then(() => {
       this.optShow = {
@@ -240,9 +251,20 @@ export default {
       }
     })
     this.initForm()
+    this.page.page = 1
+    this.page.size = 10
   },
   data() {
     return {
+      loading: false,
+      page: {
+        // 页码
+        page: 0,
+        // 每页数据条数
+        size: 10,
+        // 总数据条数
+        total: 0
+      },
       defaultProps: {children: 'children', label: 'label', isLeaf: 'leaf'},
       currentId: 0,
       menuIds: [],
@@ -264,6 +286,23 @@ export default {
     }
   },
   methods: {
+    // 预防删除当前页最后一条数据时，或者多选删除第二页的数据时，页码错误导致请求无数据
+    dleChangePage() {
+      if (this.tableData.length === 1 && this.page.page !== 1) {
+        this.page.page -= 1
+      }
+    },
+    // 每页条数改变
+    sizeChangeHandler(size) {
+      this.page.size = size
+      this.page.page = 1
+      this.refresh()
+    },
+    // 当前页改变
+    pageChangeHandler(page) {
+      this.page.page = page
+      this.refresh()
+    },
     //点击新增角色按钮时, 随机生成预设值
     initForm() {
       this.form = {
@@ -338,7 +377,7 @@ export default {
       this.$request.put("api/roles/menu", role).then(() => {
         Element.Message.success("保存成功")
         this.menuLoading = false
-        this.getRoleList()
+        this.refresh()
       }).catch(err => {
         this.menuLoading = false
         console.log(err.response.data.message)
@@ -355,7 +394,7 @@ export default {
         console.log(op + '角色成功')
         Element.Message.success("操作成功")
         this.dialogFormVisible = false
-        this.getRoleList()
+        this.refresh()
       })
     },
     // 获取弹窗内部门数据
@@ -421,16 +460,21 @@ export default {
       } else if (op === 'delete') {
         let ids = this.selectData.map(value => value.id)
         del(ids).then(res => {
-          this.getRoleList()
           Element.Message.success('删除成功')
+          this.dleChangePage()
+          this.refresh()
         });
       }
       if (op !== 'delete')
         this.dialogFormVisible = true
     },
-    getRoleList() {
-      this.$request.get('api/roles/all').then(res => {
-        this.tableData = res
+    refresh() {
+      let queryParams = {page: this.page.page - 1, size: this.page.size}
+      this.loading = true
+      this.$request.get('api/roles', {params: queryParams}).then(res => {
+        this.tableData = res.content
+        this.page.total = res.totalElements
+        this.loading = false
       })
     }
   }

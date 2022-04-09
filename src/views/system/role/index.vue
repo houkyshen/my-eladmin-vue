@@ -229,6 +229,7 @@ import store from "@/store";
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import {getDepts, getDeptSuperior} from "@/api/dept";
+import crud from "@/components/Crud/crud";
 
 import {LOAD_CHILDREN_OPTIONS} from '@riophae/vue-treeselect'
 import Element from "element-ui";
@@ -238,9 +239,12 @@ import {del} from "@/api/role";
 export default {
   name: "Role",
   components: {Treeselect},
+  mixins: [crud],
   created() {
-    //获取角色列表
-    this.refresh()
+    //获取角色列表，用nextTick方法表示等待组件渲染完成之后再调用刷新方法，避免beforeInit()中的this.$refs.menu返回undefined
+    this.$nextTick(() => {
+      this.refresh()
+    })
     //获取当前登录用户的信息
     store.dispatch('GetInfo').then(() => {
       this.optShow = {
@@ -251,20 +255,9 @@ export default {
       }
     })
     this.initForm()
-    this.page.page = 1
-    this.page.size = 10
   },
   data() {
     return {
-      loading: false,
-      page: {
-        // 页码
-        page: 0,
-        // 每页数据条数
-        size: 10,
-        // 总数据条数
-        total: 0
-      },
       defaultProps: {children: 'children', label: 'label', isLeaf: 'leaf'},
       currentId: 0,
       menuIds: [],
@@ -273,7 +266,6 @@ export default {
       optShow: {add: false, edit: false, delete: false, download: false},
       selectData: [],
       deptDatas: [],
-      tableData: [],
       dialogFormVisible: false,
       dateScopes: ['全部', '本级', '自定义'],
       menus: [],
@@ -286,22 +278,12 @@ export default {
     }
   },
   methods: {
-    // 预防删除当前页最后一条数据时，或者多选删除第二页的数据时，页码错误导致请求无数据
-    dleChangePage() {
-      if (this.tableData.length === 1 && this.page.page !== 1) {
-        this.page.page -= 1
-      }
-    },
-    // 每页条数改变
-    sizeChangeHandler(size) {
-      this.page.size = size
-      this.page.page = 1
-      this.refresh()
-    },
-    // 当前页改变
-    pageChangeHandler(page) {
-      this.page.page = page
-      this.refresh()
+    //给crud组件传入当前组件的特定数据，如url
+    beforeInit() {
+      this.url = 'api/roles'
+      // 清空菜单的选中
+      this.$refs.menu.setCheckedKeys([])
+      return true
     },
     //点击新增角色按钮时, 随机生成预设值
     initForm() {
@@ -467,15 +449,6 @@ export default {
       }
       if (op !== 'delete')
         this.dialogFormVisible = true
-    },
-    refresh() {
-      let queryParams = {page: this.page.page - 1, size: this.page.size}
-      this.loading = true
-      this.$request.get('api/roles', {params: queryParams}).then(res => {
-        this.tableData = res.content
-        this.page.total = res.totalElements
-        this.loading = false
-      })
     }
   }
 }

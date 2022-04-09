@@ -239,10 +239,11 @@
 
 import Element from 'element-ui'
 import store from "@/store"
-import qs from 'qs'
+import crud from "@/components/Crud/crud";
 
 export default {
   name: "User",
+  mixins: [crud],
   created() {
     //获取用户列表
     this.refresh()
@@ -255,21 +256,10 @@ export default {
         download: true
       }
     })
-    this.page.page = 1
-    this.page.size = 10
   },
 
   data() {
     return {
-      loading: false,
-      page: {
-        // 页码
-        page: 0,
-        // 每页数据条数
-        size: 10,
-        // 总数据条数
-        total: 0
-      },
       optShow: {add: false, edit: false, delete: false, download: false},
       selectData: [],
       jobDatas: [],
@@ -290,22 +280,10 @@ export default {
     }
   },
   methods: {
-    // 预防删除当前页最后一条数据时，或者多选删除第二页的数据时，页码错误导致请求无数据
-    dleChangePage() {
-      if (this.tableData.length === 1 && this.page.page !== 1) {
-        this.page.page -= 1
-      }
-    },
-    // 每页条数改变
-    sizeChangeHandler(size) {
-      this.page.size = size
-      this.page.page = 1
-      this.refresh()
-    },
-    // 当前页改变
-    pageChangeHandler(page) {
-      this.page.page = page
-      this.refresh()
+    //给crud组件传入当前组件的特定数据，如url
+    beforeInit() {
+      this.url = 'api/users'
+      return true
     },
     //点击新增用户按钮时, 随机生成预设值，方便快速新增用户，
     initForm() {
@@ -395,15 +373,6 @@ export default {
         this.roles = res
       })
     },
-    refresh() {
-      let queryParams = {page: this.page.page - 1, size: this.page.size}
-      this.loading = true
-      this.$request.get('api/users', {params: queryParams}).then(res => {
-        this.tableData = res.content
-        this.page.total = res.totalElements
-        this.loading = false
-      })
-    }
   }
 }
 </script>

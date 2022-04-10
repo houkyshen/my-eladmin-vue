@@ -4,54 +4,55 @@
     <div class="head-container">
       <!--增删改查按钮-->
       <div class="crud-opts">
-      <span class="crud-opts-left">
-           <!--左侧插槽-->
-           <slot name="left"/>
-           <el-button
-               v-if="optShow.add"
-               class="filter-item"
-               size="mini"
-               type="primary"
-               icon="el-icon-plus"
-               v-permission="['roles:add']"
-               @click="updateOperation('post')"
-           >
-             新增
-           </el-button>
-           <el-button
-               v-if="optShow.edit"
-               class="filter-item"
-               size="mini"
-               type="success"
-               icon="el-icon-edit"
-               :disabled="selectData.length !== 1"
-               v-permission="['roles:edit']"
-               @click="updateOperation('put')"
-           >
-             修改
-           </el-button>
-           <el-button
-               v-if="optShow.delete"
-               slot="reference"
-               class="filter-item"
-               type="danger"
-               icon="el-icon-delete"
-               size="mini"
-               v-permission="['roles:del']"
-               @click="updateOperation('delete')"
-           >
-             删除
-           </el-button>
-           <el-button
-               v-if="optShow.download"
-               class="filter-item"
-               size="mini"
-               type="warning"
-               icon="el-icon-download"
-           >导出</el-button>
-        <!--右侧-->
-           <slot name="right"/>
-        </span>
+        <span class="crud-opts-left">
+             <!--左侧插槽-->
+             <slot name="left"/>
+             <el-button
+                 v-if="optShow.add"
+                 class="filter-item"
+                 size="mini"
+                 type="primary"
+                 icon="el-icon-plus"
+                 v-permission="['roles:add']"
+                 @click="updateOperation('post')"
+             >
+               新增
+             </el-button>
+             <el-button
+                 v-if="optShow.edit"
+                 class="filter-item"
+                 size="mini"
+                 type="success"
+                 icon="el-icon-edit"
+                 :disabled="selectData.length !== 1"
+                 v-permission="['roles:edit']"
+                 @click="updateOperation('put')"
+             >
+               修改
+             </el-button>
+             <el-button
+                 v-if="optShow.delete"
+                 slot="reference"
+                 class="filter-item"
+                 type="danger"
+                 icon="el-icon-delete"
+                 :disabled="selectData.length === 0"
+                 size="mini"
+                 v-permission="['roles:del']"
+                 @click="updateOperation('delete')"
+             >
+               删除
+             </el-button>
+             <el-button
+                 v-if="optShow.download"
+                 class="filter-item"
+                 size="mini"
+                 type="warning"
+                 icon="el-icon-download"
+             >导出</el-button>
+          <!--右侧-->
+             <slot name="right"/>
+          </span>
         <el-button-group class="crud-opts-right">
           <el-button
               size="mini"
@@ -95,8 +96,8 @@
             <span class="role-span">角色列表</span>
           </div>
           <el-table
-              v-loading="loading"
-              :data="tableData"
+              v-loading="crud.loading"
+              :data="crud.tableData"
               style="width: 100%"
               @selection-change="handleSelectionChange"
               @current-change="handleCurrentChange"
@@ -134,13 +135,13 @@
           </el-table>
           <!--分页-->
           <el-pagination
-              :page-size.sync="page.size"
-              :total="page.total"
-              :current-page.sync="page.page"
+              :page-size.sync="crud.page.size"
+              :total="crud.page.total"
+              :current-page.sync="crud.page.page"
               style="margin-top: 8px;"
               layout="total, prev, pager, next, sizes"
-              @size-change="sizeChangeHandler"
-              @current-change="pageChangeHandler"
+              @size-change="crud.sizeChangeHandler"
+              @current-change="crud.pageChangeHandler"
           />
         </el-card>
       </el-col>
@@ -229,22 +230,23 @@ import store from "@/store";
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import {getDepts, getDeptSuperior} from "@/api/dept";
-import crud from "@/components/Crud/crud";
 
 import {LOAD_CHILDREN_OPTIONS} from '@riophae/vue-treeselect'
 import Element from "element-ui";
 import {getChild} from "@/api/menu";
 import {del} from "@/api/role";
 
+import CRUD, {presenter} from '@/components/Crud/crud'
+
+// crud交由presenter持有
+const crud = CRUD({title: '角色', url: 'api/roles'})
 export default {
   name: "Role",
   components: {Treeselect},
-  mixins: [crud],
+  mixins: [presenter(crud)],
   created() {
-    //获取角色列表，用nextTick方法表示等待组件渲染完成之后再调用刷新方法，避免beforeInit()中的this.$refs.menu返回undefined
-    this.$nextTick(() => {
-      this.refresh()
-    })
+    //获取角色列表
+    crud.refresh()
     //获取当前登录用户的信息
     store.dispatch('GetInfo').then(() => {
       this.optShow = {
@@ -255,6 +257,7 @@ export default {
       }
     })
     this.initForm()
+    console.log('RoleVM', this)
   },
   data() {
     return {
@@ -278,11 +281,19 @@ export default {
     }
   },
   methods: {
-    //给crud组件传入当前组件的特定数据，如url
-    beforeInit() {
-      this.url = 'api/roles'
-      // 清空菜单的选中
-      this.$refs.menu.setCheckedKeys([])
+    // 刷新后做的操作
+    [CRUD.HOOK.afterRefresh]() {
+      this.$refs.menu.setCheckedKeys([])//清空选中菜单
+    },
+    // 提交前做的操作
+    [CRUD.HOOK.afterValidateCU]() {
+      if (this.form.dataScope === '自定义' && this.deptDatas.length === 0) {
+        this.$message({
+          message: '自定义数据权限不能为空',
+          type: 'warning'
+        })
+        return false
+      }
       return true
     },
     //点击新增角色按钮时, 随机生成预设值
@@ -359,7 +370,7 @@ export default {
       this.$request.put("api/roles/menu", role).then(() => {
         Element.Message.success("保存成功")
         this.menuLoading = false
-        this.refresh()
+        crud.refresh()
       }).catch(err => {
         this.menuLoading = false
         console.log(err.response.data.message)
@@ -367,6 +378,8 @@ export default {
     },
     //发送新增、编辑角色请求给后端
     updateRole(data) {
+      //校验自定义权限时是否选择了部门，没选择就报错
+      if (!this[CRUD.HOOK.afterValidateCU]) return
       let op = this.$store.state.operation
       data.depts = this.deptDatas.map(value => {
         return {id: value}
@@ -376,7 +389,7 @@ export default {
         console.log(op + '角色成功')
         Element.Message.success("操作成功")
         this.dialogFormVisible = false
-        this.refresh()
+        crud.refresh()
       })
     },
     // 获取弹窗内部门数据
@@ -443,8 +456,8 @@ export default {
         let ids = this.selectData.map(value => value.id)
         del(ids).then(res => {
           Element.Message.success('删除成功')
-          this.dleChangePage()
-          this.refresh()
+          crud.dleChangePage()
+          crud.refresh()
         });
       }
       if (op !== 'delete')

@@ -35,6 +35,7 @@
                class="filter-item"
                type="danger"
                icon="el-icon-delete"
+               :disabled="selectData.length === 0"
                size="mini"
                v-permission="['user:del']"
                @click="updateOperation('delete')"
@@ -87,9 +88,11 @@
     </div>
     <!--用户列表信息表格-->
     <el-table
-        v-loading="loading"
-        :data="tableData"
+        v-loading="crud.loading"
+        :data="crud.tableData"
         style="width: 100%"
+        highlight-current-row
+        @current-change="handleCurrentChange"
         @selection-change="handleSelectionChange">
       <el-table-column
           type="selection"
@@ -141,25 +144,16 @@
           label="创建日期"
           width="200">
       </el-table-column>
-      <el-table-column
-          prop="operation"
-          label="操作"
-          width="120">
-        <template slot-scope="scope">
-          <el-button type="text" size="small">Edit</el-button>
-          <el-button type="text" size="small">Delete</el-button>
-        </template>
-      </el-table-column>
     </el-table>
     <!--分页-->
     <el-pagination
-        :page-size.sync="page.size"
-        :total="page.total"
-        :current-page.sync="page.page"
+        :page-size.sync="crud.page.size"
+        :total="crud.page.total"
+        :current-page.sync="crud.page.page"
         style="margin-top: 8px;"
         layout="total, prev, pager, next, sizes"
-        @size-change="sizeChangeHandler"
-        @current-change="pageChangeHandler"
+        @size-change="crud.sizeChangeHandler"
+        @current-change="crud.pageChangeHandler"
     />
     <!--用户信息编辑弹窗-->
     <el-dialog append-to-body title="用户信息" :visible.sync="dialogFormVisible" width="680px">
@@ -239,14 +233,16 @@
 
 import Element from 'element-ui'
 import store from "@/store"
-import crud from "@/components/Crud/crud";
+import CRUD, {presenter} from '@/components/Crud/crud'
 
+// crud交由presenter持有
+const crud = CRUD({title: '用户', url: 'api/users'})
 export default {
   name: "User",
-  mixins: [crud],
+  mixins: [presenter(crud)],
   created() {
     //获取用户列表
-    this.refresh()
+    crud.refresh()
     //获取当前登录用户的信息
     store.dispatch('GetInfo').then(() => {
       this.optShow = {
@@ -256,6 +252,7 @@ export default {
         download: true
       }
     })
+    console.log('UserVM', this)
   },
 
   data() {
@@ -275,16 +272,10 @@ export default {
       deptData: {},
       depts: [],
       dialogFormVisible: false,
-      tableData: [],
       form: {}
     }
   },
   methods: {
-    //给crud组件传入当前组件的特定数据，如url
-    beforeInit() {
-      this.url = 'api/users'
-      return true
-    },
     //点击新增用户按钮时, 随机生成预设值，方便快速新增用户，
     initForm() {
       this.form = {
@@ -302,6 +293,14 @@ export default {
       this.deptData = '研发部'
       this.roleDatas = [2]
       this.jobDatas = [11]
+    },
+    //点击状态按钮时，发送请求给后端对用户状态进行修改
+    handleCurrentChange(selectRow) {
+      if (!selectRow) return
+      this.mapForm(selectRow)
+      this.$request.put('api/users', this.form).then(res => {
+        crud.refresh()
+      });
     },
     //让选中的数据显示到框框里面
     mapForm(selectRow) {
@@ -321,7 +320,7 @@ export default {
       this.$request({url: 'api/users', method: op, data: data}).then(res => {
         Element.Message.success("操作成功")
         this.dialogFormVisible = false
-        this.refresh()
+        crud.refresh()
       })
     },
     //由于select组件绑定的Jobs里面只有数字组成的数组[1,2,3]，而不是对象如[{id:1},{id:2}]，需要进行转化
@@ -330,7 +329,6 @@ export default {
         return {id: value}
       })
     },
-
     //由于select组件绑定的Jobs里面只有数字组成的数组[1,2,3]，而不是对象如[{id:1},{id:2}]，需要进行转化
     changeJob() {
       this.form.jobs = this.jobDatas.map(value => {
@@ -360,7 +358,7 @@ export default {
       this.dialogFormVisible = op !== 'delete'
       if (op !== 'delete') this.getJobAndRole()
       else {
-        this.dleChangePage()
+        crud.dleChangePage()
         this.updateUser(this.selectData.map(value => value.id))
       }
     },

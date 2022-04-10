@@ -1,10 +1,18 @@
 import {initData} from "@/api/data";
 import Vue from 'vue'
 
-//这里的this指的是crud实例
+/**
+ * CRUD配置
+ * @param {*} options <br>
+ * @return crud instance.
+ * @example
+ * 要使用多crud时，请在关联crud的组件处使用crud-tag进行标记，如：<jobForm :job-status="dict.job_status" crud-tag="job" />
+ */
 function CRUD(options) {
     const data = {
         ...options,
+        //每个CRUD实例都有一个tag，
+        tag: 'default',
         loading: true,
         //表格数据
         tableData: [],
@@ -20,6 +28,7 @@ function CRUD(options) {
         params: {}
     }
 
+    //CRUD函数内部的this指的是crud实例
     const methods = {
         refresh() {
             this.loading = true
@@ -114,7 +123,7 @@ function CRUD(options) {
     return crud
 }
 
-// hook VM
+// 通过这个方法调用CURD定义的钩子函数
 function callVmHook(crud, hook) {
     let ret = true
     // 有些组件扮演了多个角色，调用钩子时，需要去重，指的是当一个组件混入presenter(), header(), form(), crud()其中的两个以上时，就会出现重复注册
@@ -141,6 +150,7 @@ CRUD.HOOK = {
 /**
  * crud主页
  * 要把presenter理解成可被混入的组件
+ * 原来通过传入crud进行赋值的模式保留，新增通过this.$options.cruds的方式进行crud的传入
  */
 function presenter(crud) {
     return {
@@ -151,9 +161,29 @@ function presenter(crud) {
             }
         },
         beforeCreate() {//为了方便理解，这里增加一个vue组件的钩子函数，用来做crud的传入
-            this.crud = crud
-            console.log('请问presenter的this到底是谁?', this)
-            this.crud.registerVM('presenter', this, 0)
+            if (crud){
+                this.crud = crud
+                this.crud.registerVM('presenter', this, 0)
+                return
+            }
+            this.$crud = this.$crud || {}
+            let cruds = this.$options.cruds instanceof Function ? this.$options.cruds() : crud
+            if (!(cruds instanceof Array)) {
+                cruds = [cruds]
+            }
+            // 目前即使是原项目也没出现一个页面使用多个crud的情况，所以这段代码其实改为直接注册presenter组件即可
+            cruds.forEach(ele => {
+                if (this.$crud[ele.tag]) {
+                    console.error('[CRUD error]: ' + 'ele with tag [' + ele.tag + ' is already exist')
+                }
+                this.$crud[ele.tag] = ele
+                ele.registerVM('presenter', this, 0)
+            })
+            this.crud = this.$crud['defalut'] || cruds[0]
+            console.log(this.crud)
+        },
+        created() {
+          this.crud.refresh()
         },
         destroyed() {
             this.crud.unregisterVM(this)

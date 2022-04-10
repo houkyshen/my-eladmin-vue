@@ -235,14 +235,15 @@ import Element from 'element-ui'
 import store from "@/store"
 import CRUD, {presenter} from '@/components/Crud/crud'
 
-// crud交由presenter持有
-const crud = CRUD({title: '用户', url: 'api/users'})
 export default {
   name: "User",
-  mixins: [presenter(crud)],
+  cruds() {
+    return CRUD({title: '用户', url: 'api/users'})
+  },
+  mixins: [presenter()],
   created() {
     //获取用户列表
-    crud.refresh()
+    this.crud.refresh()
     //获取当前登录用户的信息
     store.dispatch('GetInfo').then(() => {
       this.optShow = {
@@ -299,7 +300,7 @@ export default {
       if (!selectRow) return
       this.mapForm(selectRow)
       this.$request.put('api/users', this.form).then(res => {
-        crud.refresh()
+        this.crud.refresh()
       });
     },
     //让选中的数据显示到框框里面
@@ -320,7 +321,7 @@ export default {
       this.$request({url: 'api/users', method: op, data: data}).then(res => {
         Element.Message.success("操作成功")
         this.dialogFormVisible = false
-        crud.refresh()
+        this.crud.refresh()
       })
     },
     //由于select组件绑定的Jobs里面只有数字组成的数组[1,2,3]，而不是对象如[{id:1},{id:2}]，需要进行转化
@@ -358,7 +359,7 @@ export default {
       this.dialogFormVisible = op !== 'delete'
       if (op !== 'delete') this.getJobAndRole()
       else {
-        crud.dleChangePage()
+        this.crud.dleChangePage()
         this.updateUser(this.selectData.map(value => value.id))
       }
     },

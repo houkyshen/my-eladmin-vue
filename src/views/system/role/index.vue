@@ -239,14 +239,16 @@ import {del} from "@/api/role";
 import CRUD, {presenter} from '@/components/Crud/crud'
 
 // crud交由presenter持有
-const crud = CRUD({title: '角色', url: 'api/roles'})
 export default {
   name: "Role",
   components: {Treeselect},
-  mixins: [presenter(crud)],
+  cruds() {
+    return CRUD({ title: '角色', url: 'api/roles'})
+  },
+  mixins: [presenter()],
   created() {
     //获取角色列表
-    crud.refresh()
+    this.crud.refresh()
     //获取当前登录用户的信息
     store.dispatch('GetInfo').then(() => {
       this.optShow = {
@@ -370,7 +372,7 @@ export default {
       this.$request.put("api/roles/menu", role).then(() => {
         Element.Message.success("保存成功")
         this.menuLoading = false
-        crud.refresh()
+        this.crud.refresh()
       }).catch(err => {
         this.menuLoading = false
         console.log(err.response.data.message)
@@ -389,7 +391,7 @@ export default {
         console.log(op + '角色成功')
         Element.Message.success("操作成功")
         this.dialogFormVisible = false
-        crud.refresh()
+        this.crud.refresh()
       })
     },
     // 获取弹窗内部门数据
@@ -456,8 +458,8 @@ export default {
         let ids = this.selectData.map(value => value.id)
         del(ids).then(res => {
           Element.Message.success('删除成功')
-          crud.dleChangePage()
-          crud.refresh()
+          this.crud.dleChangePage()
+          this.crud.refresh()
         });
       }
       if (op !== 'delete')

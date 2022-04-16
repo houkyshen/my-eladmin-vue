@@ -3,89 +3,7 @@
     <!--工具栏-->
     <div class="head-container">
       <!--增删改查按钮-->
-      <div class="crud-opts">
-        <span class="crud-opts-left">
-             <!--左侧插槽-->
-             <slot name="left"/>
-             <el-button
-                 v-if="optShow.add"
-                 class="filter-item"
-                 size="mini"
-                 type="primary"
-                 icon="el-icon-plus"
-                 v-permission="['roles:add']"
-                 @click="updateOperation('post')"
-             >
-               新增
-             </el-button>
-             <el-button
-                 v-if="optShow.edit"
-                 class="filter-item"
-                 size="mini"
-                 type="success"
-                 icon="el-icon-edit"
-                 :disabled="selectData.length !== 1"
-                 v-permission="['roles:edit']"
-                 @click="updateOperation('put')"
-             >
-               修改
-             </el-button>
-             <el-button
-                 v-if="optShow.delete"
-                 slot="reference"
-                 class="filter-item"
-                 type="danger"
-                 icon="el-icon-delete"
-                 :disabled="selectData.length === 0"
-                 size="mini"
-                 v-permission="['roles:del']"
-                 @click="updateOperation('delete')"
-             >
-               删除
-             </el-button>
-             <el-button
-                 v-if="optShow.download"
-                 class="filter-item"
-                 size="mini"
-                 type="warning"
-                 icon="el-icon-download"
-             >导出</el-button>
-          <!--右侧-->
-             <slot name="right"/>
-          </span>
-        <el-button-group class="crud-opts-right">
-          <el-button
-              size="mini"
-              plain
-              type="info"
-              icon="el-icon-search"
-          />
-          <el-button
-              size="mini"
-              icon="el-icon-refresh"
-          />
-          <el-popover
-              placement="bottom-end"
-              width="150"
-              trigger="click"
-          >
-            <el-button
-                slot="reference"
-                size="mini"
-                icon="el-icon-s-grid"
-            >
-              <i
-                  class="fa fa-caret-down"
-                  aria-hidden="true"
-              />
-            </el-button>
-            <el-checkbox
-            >
-              全选
-            </el-checkbox>
-          </el-popover>
-        </el-button-group>
-      </div>
+      <crudOperation></crudOperation>
     </div>
     <el-row :gutter="15">
 
@@ -154,7 +72,6 @@
               <span class="role-span">菜单分配</span>
             </el-tooltip>
             <el-button
-                v-if="optShow.edit"
                 v-permission="['roles:edit']"
                 :disabled="!showButton"
                 :loading="menuLoading"
@@ -235,30 +152,28 @@ import {LOAD_CHILDREN_OPTIONS} from '@riophae/vue-treeselect'
 import Element from "element-ui";
 import {getChild} from "@/api/menu";
 import {del} from "@/api/role";
+import crudOperation from '@/components/Crud/CRUD.operation'
 
 import CRUD, {presenter} from '@/components/Crud/crud'
 
 // crud交由presenter持有
 export default {
   name: "Role",
-  components: {Treeselect},
+  components: {Treeselect, crudOperation},
   cruds() {
-    return CRUD({ title: '角色', url: 'api/roles'})
+    return CRUD({title: '角色', url: 'api/roles'})
   },
   mixins: [presenter()],
   created() {
-    //获取角色列表
-    this.crud.refresh()
     //获取当前登录用户的信息
     store.dispatch('GetInfo').then(() => {
-      this.optShow = {
+      this.crud.optShow = {
         add: true,
         edit: true,
         delete: true,
         download: true
       }
     })
-    this.initForm()
     console.log('RoleVM', this)
   },
   data() {
@@ -268,8 +183,6 @@ export default {
       menuIds: [],
       menuLoading: false,
       showButton: false,
-      optShow: {add: false, edit: false, delete: false, download: false},
-      selectData: [],
       deptDatas: [],
       dialogFormVisible: false,
       dateScopes: ['全部', '本级', '自定义'],
@@ -326,7 +239,7 @@ export default {
     },
     //选中某一行的[复选框]时触发，修改和删除角色时使用
     handleSelectionChange(rows) {
-      this.selectData = rows
+      this.crud.selectData = rows
     },
     //当点击复选框改变菜单权限时
     menuChange(menu) {
@@ -387,7 +300,7 @@ export default {
         return {id: value}
       })
       console.log("提交给后端/api/roles接口的数据", data)
-      this.$request({url: 'api/roles', method: op, data: data}).then(res => {
+      this.$request({url: 'api/roles', method: op, data: data}).then(() => {
         console.log(op + '角色成功')
         Element.Message.success("操作成功")
         this.dialogFormVisible = false
@@ -439,14 +352,13 @@ export default {
       })
     },
     //点击新增、编辑、删除按钮时
-    updateOperation(op) {
+    [CRUD.HOOK.updateOperation](crud, op) {
+      this.$store.commit('SET_OP', op)
       if (op === 'post') {//新增用户
         this.initForm()
-        this.$store.commit('SET_OP', op)
       } else if (op === 'put') {//编辑用户
-        this.form = {...this.selectData[0]}
-        this.$store.commit('SET_OP', op)
-        if (this.selectData[0].dataScope === '自定义')
+        this.form = {...this.crud.selectData[0]}
+        if (this.crud.selectData[0].dataScope === '自定义')
           this.deptDatas = this.form.depts.map(dept => dept.id)
         getDeptSuperior(this.deptDatas).then(res => {//根据当前选中角色的数据权限去获取同级及上级部门，构建tree的内容，下级留着懒加载
               const depts = res.content
@@ -455,8 +367,8 @@ export default {
             }
         )
       } else if (op === 'delete') {
-        let ids = this.selectData.map(value => value.id)
-        del(ids).then(res => {
+        let ids = this.crud.selectData.map(value => value.id)
+        del(ids).then(() => {
           Element.Message.success('删除成功')
           this.crud.dleChangePage()
           this.crud.refresh()

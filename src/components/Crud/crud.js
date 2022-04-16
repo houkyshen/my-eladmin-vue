@@ -25,7 +25,10 @@ function CRUD(options) {
             total: 0
         },
         //查询参数，由混入组件提供
-        params: {}
+        params: {},
+        //增删改查按钮
+        optShow: {add: false, edit: false, delete: false, download: false},
+        selectData: [],
     }
 
     //CRUD函数内部的this指的是crud实例
@@ -63,6 +66,10 @@ function CRUD(options) {
         // 扩展crud的数据
         updateProp(name, value) {
             Vue.set(crud.props, name, value)
+        },
+        //点击新增、编辑、删除按钮时
+        updateOperation(op) {
+            callVmHook(crud, CRUD.HOOK.updateOperation, op)
         }
     }
 
@@ -128,10 +135,18 @@ function callVmHook(crud, hook) {
     let ret = true
     // 有些组件扮演了多个角色，调用钩子时，需要去重，指的是当一个组件混入presenter(), header(), form(), crud()其中的两个以上时，就会出现重复注册
     const vmSet = new Set()
+    const nargs = [crud]
+    for (let i = 2; i < arguments.length; ++i) {
+        nargs.push(arguments[i])
+    }
     crud.vms.forEach(vm => vm && vmSet.add(vm.vm))
+    console.log('vm数量', crud.vms)
+    console.log('vm具体', crud.vms.map(vm => {
+        return vm.vm.$el
+    }))
     vmSet.forEach(vm => {
         if (vm[hook]) {
-            ret = vm[hook].apply() !== false && ret
+            ret = vm[hook].apply(vm, nargs) !== false && ret
         }
     })
     return ret
@@ -145,6 +160,8 @@ CRUD.HOOK = {
     afterRefresh: 'afterCrudRefresh',
     /** "新建/编辑" 验证 - 之后 */
     afterValidateCU: 'afterCrudValidateCU',
+    /** "点击增删改查按钮"  - 之后 */
+    updateOperation: 'updateOperation'
 }
 
 /**
@@ -161,7 +178,7 @@ function presenter(crud) {
             }
         },
         beforeCreate() {//为了方便理解，这里增加一个vue组件的钩子函数，用来做crud的传入
-            if (crud){
+            if (crud) {
                 this.crud = crud
                 this.crud.registerVM('presenter', this, 0)
                 return
@@ -183,7 +200,8 @@ function presenter(crud) {
             console.log(this.crud)
         },
         created() {
-          this.crud.refresh()
+            //有这句代码，用户组件和角色组件的created方法就不用再分别调用refresh了。
+            this.crud.refresh()
         },
         destroyed() {
             this.crud.unregisterVM(this)
@@ -191,6 +209,61 @@ function presenter(crud) {
     }
 }
 
+/**
+ * crud，用来给提取出来的独立组件提供混入的方法
+ */
+function crud(options = {}) {
+    const defaultOptions = {
+        type: undefined
+    }
+    options = mergeOptions(defaultOptions, options)
+    return {
+        data() {
+            return {
+                crud: this.crud
+            }
+        },
+        beforeCreate() {
+            this.crud = lookupCrud(this)
+            this.crud.registerVM(options.type, this)
+        },
+        destroyed() {
+            this.crud.unregisterVM(options.type, this)
+        }
+    }
+}
+
+function mergeOptions(src, opts) {
+    const optsRet = {
+        ...src
+    }
+    for (const key in src) {
+        if (opts.hasOwnProperty(key)) {
+            optsRet[key] = opts[key]
+        }
+    }
+    return optsRet
+}
+
+/**
+ * 查找crud
+ * 如果使用组件的时候有传crud-tag标签，则创建独立的crud
+ * @param {*} vm
+ * @param {string} tag
+ */
+function lookupCrud(vm, tag) {
+    tag = tag || vm.$attrs['crud-tag'] || 'default'
+    //$crud在presenter中定义
+    if (vm.$crud) {
+        const ret = vm.$crud[tag]
+        if (ret) {
+            return ret
+        }
+    } else
+        //如果vm.$crud不存在，则寻找父组件的$crud
+        return vm.$parent ? lookupCrud(vm.$parent, tag) : undefined
+}
+
 export default CRUD
 
-export {presenter}
+export {presenter, crud}
